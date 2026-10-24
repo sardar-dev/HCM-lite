@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Company Settings. Manage office start time, grace period, leave quota and working days.">
+  <title>Settings — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="employees.html"><span class="nav-icon">👥</span> Employees</a>
+        <div class="nav-section">Management</div>
+        <a href="leaves.html"><span class="nav-icon">📅</span> Leaves</a>
+        <a href="payslip.html"><span class="nav-icon">💰</span> Payslips</a>
+        <a href="settings.html" class="active"><span class="nav-icon">⚙</span> Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Admin</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1>Company Settings</h1>
+          <p class="text-sm text-muted">Configure your organisation policies, office timings and leave quotas</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <!-- Settings Form Card -->
+        <div class="card">
+          <div class="card-body">
+            <h3 style="margin-bottom:var(--sp-2)">Organisation Configuration</h3>
+            <p class="text-sm text-muted" style="margin-bottom:var(--sp-6)">
+              Attendance calculations, grace thresholds, and leave balances dynamically use these values.
+            </p>
+
+            <form id="settings-form" autocomplete="off" novalidate>
+              <!-- Company Name -->
+              <div class="form-group">
+                <label class="form-label" for="set-company-name">Company Name</label>
+                <input class="form-input" id="set-company-name" type="text" placeholder="e.g. Acme Corporation">
+                <div class="form-error"></div>
+              </div>
+
+              <!-- Timings Row -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="set-office-start">Office Start Time</label>
+                  <input class="form-input" id="set-office-start" type="time">
+                  <div class="form-error"></div>
+                  <div class="text-xs text-muted" style="margin-top:4px">Standard check-in time for all employees.</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="set-grace-minutes">Grace Period (Minutes)</label>
+                  <input class="form-input" id="set-grace-minutes" type="number" min="0" max="180" placeholder="e.g. 15">
+                  <div class="form-error"></div>
+                  <div class="text-xs text-muted" style="margin-top:4px">Check-ins beyond start time + grace are marked Late.</div>
+                </div>
+              </div>
+
+              <!-- Leave Quota -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="set-leave-quota">Yearly Leave Quota (Days)</label>
+                  <input class="form-input" id="set-leave-quota" type="number" min="1" max="365" placeholder="e.g. 20">
+                  <div class="form-error"></div>
+                  <div class="text-xs text-muted" style="margin-top:4px">Total approved leave days allowed per employee per year.</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Half-Day Work Rule</label>
+                  <input class="form-input" type="text" value="Under 5 hours worked = Half Day" disabled style="background:var(--gray-50);cursor:not-allowed">
+                  <div class="text-xs text-muted" style="margin-top:4px">Fixed system rule per attendance policy.</div>
+                </div>
+              </div>
+
+              <!-- Working Days Checkboxes -->
+              <div class="form-group">
+                <label class="form-label">Working Days</label>
+                <div class="days-grid" id="working-days-container">
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Monday"> Monday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Tuesday"> Tuesday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Wednesday"> Wednesday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Thursday"> Thursday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Friday"> Friday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Saturday"> Saturday
+                  </label>
+                  <label class="checkbox-pill">
+                    <input type="checkbox" name="workingDay" value="Sunday"> Sunday
+                  </label>
+                </div>
+                <div class="form-error" id="days-error"></div>
+                <div class="text-xs text-muted" style="margin-top:4px">Absence is computed from missing records on selected working days only.</div>
+              </div>
+
+              <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-6)">
+                <button class="btn btn-primary" type="submit">Save Settings</button>
+                <button class="btn btn-secondary" type="button" onclick="loadSettings()">Reset Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Policy Summary Card -->
+        <div>
+          <div class="card">
+            <div class="card-body">
+              <h3 style="margin-bottom:var(--sp-4)">Policy Summary</h3>
+
+              <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+                <div>
+                  <div class="text-xs text-muted">ORGANISATION</div>
+                  <div style="font-weight:600;font-size:1.05rem" id="sum-company-name">—</div>
+                </div>
+
+                <div>
+                  <div class="text-xs text-muted">OFFICE TIMINGS</div>
+                  <div style="font-weight:600" id="sum-timings">—</div>
+                  <div class="text-xs text-muted" id="sum-cutoff">—</div>
+                </div>
+
+                <div>
+                  <div class="text-xs text-muted">ANNUAL LEAVE QUOTA</div>
+                  <div style="font-weight:600" id="sum-quota">—</div>
+                </div>
+
+                <div>
+                  <div class="text-xs text-muted">ACTIVE WORKING DAYS</div>
+                  <div style="font-weight:600" id="sum-working-days">—</div>
+                </div>
+
+                <div>
+                  <div class="text-xs text-muted">HALF DAY THRESHOLD</div>
+                  <div style="font-weight:600">Work duration &lt; 5 hours</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Security Card -->
+          <div class="card" style="margin-top:var(--sp-6)">
+            <div class="card-body">
+              <h3 style="margin-bottom:var(--sp-2)">Admin Security</h3>
+              <p class="text-sm text-muted" style="margin-bottom:var(--sp-4)">
+                Update your administrator account password.
+              </p>
+              <form id="admin-pass-form" autocomplete="off" novalidate>
+                <div class="form-group">
+                  <label class="form-label" for="admin-current-pass">Current Password</label>
+                  <input class="form-input" id="admin-current-pass" type="password" placeholder="Current password">
+                  <div class="form-error"></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="admin-new-pass">New Password</label>
+                  <input class="form-input" id="admin-new-pass" type="password" placeholder="At least 4 characters">
+                  <div class="form-error"></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="admin-confirm-pass">Confirm New Password</label>
+                  <input class="form-input" id="admin-confirm-pass" type="password" placeholder="Repeat new password">
+                  <div class="form-error"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" type="submit" style="width:100%">Update Password</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    let activeAdminSession = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      activeAdminSession = requireAdmin();
+      if (!activeAdminSession) return;
+      populateSidebarUser();
+      initMobileSidebar();
+      loadSettings();
+      initSmartHelper(activeAdminSession);
+
+      const form = document.getElementById('settings-form');
+      form.addEventListener('submit', handleSettingsSubmit);
+
+      const passForm = document.getElementById('admin-pass-form');
+      if (passForm) passForm.addEventListener('submit', handleAdminPasswordChange);
+    });
+
+    function handleAdminPasswordChange(e) {
+      e.preventDefault();
+      const form = e.target;
+      clearValidationErrors(form);
+
+      const curField = document.getElementById('admin-current-pass');
+      const newField = document.getElementById('admin-new-pass');
+      const confField = document.getElementById('admin-confirm-pass');
+
+      let hasError = false;
+      if (!curField.value) {
+        showFieldError(curField, 'Current password is required.');
+        hasError = true;
+      }
+      if (!newField.value) {
+        showFieldError(newField, 'New password is required.');
+        hasError = true;
+      } else if (newField.value.length < 4) {
+        showFieldError(newField, 'Password must be at least 4 characters.');
+        hasError = true;
+      }
+      if (!confField.value) {
+        showFieldError(confField, 'Please confirm your new password.');
+        hasError = true;
+      } else if (confField.value !== newField.value) {
+        showFieldError(confField, 'Passwords do not match.');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      const res = changeUserPassword(activeAdminSession.userId, curField.value, newField.value);
+      if (!res.success) {
+        if (res.message.toLowerCase().includes('current password')) {
+          showFieldError(curField, res.message);
+        } else {
+          showFieldError(newField, res.message);
+        }
+        showToast(res.message, 'danger');
+        return;
+      }
+
+      form.reset();
+      showToast('Admin password updated successfully.', 'success');
+    }
+
+    function loadSettings() {
+      const settings = getCompanySettings();
+      const form = document.getElementById('settings-form');
+      clearValidationErrors(form);
+
+      document.getElementById('set-company-name').value  = settings.name || '';
+      document.getElementById('set-office-start').value   = settings.officeStartTime || '09:00';
+      document.getElementById('set-grace-minutes').value  = settings.graceMinutes ?? 15;
+      document.getElementById('set-leave-quota').value   = settings.leaveQuota ?? 20;
+
+      const checkedDays = settings.workingDays || [];
+      form.querySelectorAll('input[name="workingDay"]').forEach(cb => {
+        cb.checked = checkedDays.includes(cb.value);
+      });
+
+      updateSummaryPreview(settings);
+    }
+
+    function updateSummaryPreview(s) {
+      document.getElementById('sum-company-name').textContent = s.name || 'HCM Lite';
+      document.getElementById('sum-timings').textContent = `Starts at ${formatDisplayTime(s.officeStartTime || '09:00')}`;
+
+      const [sh, sm] = (s.officeStartTime || '09:00').split(':').map(Number);
+      const totalCutoffMin = (sh * 60) + (sm || 0) + Number(s.graceMinutes || 0);
+      const cutoffH = Math.floor(totalCutoffMin / 60);
+      const cutoffM = totalCutoffMin % 60;
+      const cutoffStr = `${String(cutoffH).padStart(2,'0')}:${String(cutoffM).padStart(2,'0')}`;
+      document.getElementById('sum-cutoff').textContent = `Grace: ${s.graceMinutes || 0} mins (Late after ${formatDisplayTime(cutoffStr)})`;
+
+      document.getElementById('sum-quota').textContent = `${s.leaveQuota || 20} days / year`;
+      const days = s.workingDays || [];
+      document.getElementById('sum-working-days').textContent = days.length > 0 ? `${days.length} days (${days.join(', ')})` : 'None';
+    }
+
+    function handleSettingsSubmit(e) {
+      e.preventDefault();
+      const form = e.target;
+      clearValidationErrors(form);
+
+      const nameField  = form.querySelector('#set-company-name');
+      const startField = form.querySelector('#set-office-start');
+      const graceField = form.querySelector('#set-grace-minutes');
+      const quotaField = form.querySelector('#set-leave-quota');
+
+      const validations = [
+        {
+          field: nameField,
+          rules: [{ test: v => v.trim().length > 0, message: 'Company name is required.' }],
+        },
+        {
+          field: startField,
+          rules: [{ test: v => Boolean(v && v.trim()), message: 'Office start time is required.' }],
+        },
+        {
+          field: graceField,
+          rules: [
+            { test: v => v !== '' && !isNaN(Number(v)), message: 'Grace period is required.' },
+            { test: v => Number(v) >= 0, message: 'Grace minutes must be 0 or greater.' },
+          ],
+        },
+        {
+          field: quotaField,
+          rules: [
+            { test: v => v !== '' && !isNaN(Number(v)), message: 'Leave quota is required.' },
+            { test: v => Number(v) >= 1, message: 'Leave quota must be at least 1 day.' },
+          ],
+        },
+      ];
+
+      if (!validateFields(form, validations)) return;
+
+      // Validate working days
+      const checkedBoxes = [...form.querySelectorAll('input[name="workingDay"]:checked')];
+      const daysErr = document.getElementById('days-error');
+      if (checkedBoxes.length === 0) {
+        if (daysErr) {
+          daysErr.textContent = 'Please select at least one working day.';
+          daysErr.classList.add('visible');
+        }
+        return;
+      } else if (daysErr) {
+        daysErr.classList.remove('visible');
+      }
+
+      const selectedDays = checkedBoxes.map(cb => cb.value);
+      const company = getCompany() || {};
+
+      const updated = {
+        ...company,
+        name: nameField.value.trim(),
+        officeStartTime: startField.value,
+        graceMinutes: Number(graceField.value),
+        leaveQuota: Number(quotaField.value),
+        workingDays: selectedDays,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setCompany(updated);
+      populateSidebarUser();
+      updateSummaryPreview(updated);
+      showToast('Company settings updated successfully.', 'success');
+    }
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>

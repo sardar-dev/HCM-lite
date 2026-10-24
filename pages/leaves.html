@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Admin Leave Management. Review, approve and reject employee leave requests.">
+  <title>Leave Management — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar Toggle (mobile) -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a href="admin.html">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="employees.html">
+          <span class="nav-icon">👥</span> Employees
+        </a>
+        <div class="nav-section">Management</div>
+        <a href="leaves.html" class="active">
+          <span class="nav-icon">📅</span> Leaves
+        </a>
+        <a href="payslip.html">
+          <span class="nav-icon">💰</span> Payslips
+        </a>
+        <a href="settings.html">
+          <span class="nav-icon">⚙</span> Settings
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Admin</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1>Leave Management <span class="badge badge-info" id="leaves-total-badge">0</span></h1>
+          <p class="text-sm text-muted">Review, approve, and manage employee leave applications</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stat Grid -->
+      <div class="stat-grid">
+        <div class="card stat-card">
+          <div class="stat-icon blue">📋</div>
+          <div class="stat-label">Total Requests</div>
+          <div class="stat-value" id="stat-total-leaves">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon amber">⏳</div>
+          <div class="stat-label">Pending Approval</div>
+          <div class="stat-value" id="stat-pending-leaves">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon green">✓</div>
+          <div class="stat-label">Approved</div>
+          <div class="stat-value" id="stat-approved-leaves">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon red">✕</div>
+          <div class="stat-label">Rejected</div>
+          <div class="stat-value" id="stat-rejected-leaves">0</div>
+        </div>
+      </div>
+
+      <!-- Toolbar: Search & Filter -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input class="form-input" id="leave-search" type="text" placeholder="Search by employee, department or reason…">
+        </div>
+        <select class="form-select filter-select" id="leave-status-filter">
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Leave Type</th>
+                <th>Date Range</th>
+                <th>Working Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Admin Comment</th>
+                <th style="width:140px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="leaves-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="leaves-empty">
+          <div class="empty-icon">🏖</div>
+          <p>No leave requests found.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ====== Review Leave Request Modal ====== -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h3>Review Leave Request</h3>
+        <button class="modal-close" onclick="closeReviewModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="review-leave-id">
+
+        <!-- Request Details Summary Card -->
+        <div style="background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-5)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--sp-3)">
+            <div>
+              <div style="font-weight:600;font-size:1.05rem" id="rev-emp-name">—</div>
+              <div class="text-xs text-muted" id="rev-emp-dept">—</div>
+            </div>
+            <div id="rev-leave-badge"><span class="badge badge-warning">Pending</span></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);font-size:0.875rem">
+            <div>
+              <div class="text-xs text-muted">LEAVE TYPE</div>
+              <div style="font-weight:550" id="rev-leave-type">—</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted">DURATION</div>
+              <div style="font-weight:550" id="rev-duration">—</div>
+            </div>
+            <div style="grid-column:span 2">
+              <div class="text-xs text-muted">DATE RANGE</div>
+              <div style="font-weight:550" id="rev-dates">—</div>
+            </div>
+            <div style="grid-column:span 2">
+              <div class="text-xs text-muted">REASON</div>
+              <div style="margin-top:2px;color:var(--text-primary)" id="rev-reason">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee Leave Balance Live Check -->
+        <div style="background:var(--brand-50);border:1px solid var(--brand-200);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-5)">
+          <div class="text-xs" style="color:var(--brand-800);font-weight:600;margin-bottom:4px">EMPLOYEE LEAVE QUOTA STATUS</div>
+          <div style="font-size:0.875rem;color:var(--brand-900)" id="rev-quota-info">Loading quota…</div>
+        </div>
+
+        <!-- Admin Comment Input -->
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" for="review-comment">Admin Comment (Optional)</label>
+          <textarea class="form-textarea" id="review-comment" placeholder="Add a comment or explanation for the employee..."></textarea>
+          <div class="text-xs text-muted" style="margin-top:4px">This note will be visible to the employee on their portal.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeReviewModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="executeReview('reject')">✕ Reject</button>
+        <button class="btn btn-success" id="btn-approve" onclick="executeReview('approve')">✓ Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    let activeReviewLeaveId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const session = requireAdmin();
+      if (!session) return;
+      populateSidebarUser();
+      initMobileSidebar();
+      renderLeavesPage();
+      initSmartHelper(session);
+
+      // Search & filter listeners
+      let searchTimer;
+      document.getElementById('leave-search').addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(renderLeavesPage, 200);
+      });
+
+      document.getElementById('leave-status-filter').addEventListener('change', renderLeavesPage);
+
+      // Modal click-outside & escape listeners
+      const modal = document.getElementById('review-modal');
+      if (modal) {
+        modal.addEventListener('click', e => {
+          if (e.target === modal) closeReviewModal();
+        });
+      }
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
+          closeReviewModal();
+        }
+      });
+    });
+
+    function getFilters() {
+      return {
+        search: (document.getElementById('leave-search')?.value) || '',
+        status: (document.getElementById('leave-status-filter')?.value) || 'all',
+      };
+    }
+
+    function renderLeavesPage() {
+      const stats = getLeaveStatistics();
+      document.getElementById('stat-total-leaves').textContent    = stats.total;
+      document.getElementById('stat-pending-leaves').textContent  = stats.pending;
+      document.getElementById('stat-approved-leaves').textContent = stats.approved;
+      document.getElementById('stat-rejected-leaves').textContent = stats.rejected;
+      document.getElementById('leaves-total-badge').textContent   = stats.total;
+
+      const filters = getFilters();
+      const leaves = getAllLeaveRequests(filters);
+      const tbody = document.getElementById('leaves-tbody');
+      const emptyEl = document.getElementById('leaves-empty');
+
+      if (!tbody) return;
+
+      if (leaves.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      tbody.innerHTML = leaves.map(l => {
+        const isPending = l.status === 'pending';
+        return `
+          <tr data-id="${l.id}">
+            <td>
+              <div style="display:flex;align-items:center;gap:var(--sp-3)">
+                <div class="sidebar-avatar" style="width:32px;height:32px;font-size:.75rem">${getInitials(l.employeeName)}</div>
+                <div>
+                  <div style="font-weight:550">${escapeHtml(l.employeeName)}</div>
+                  <div class="text-xs text-muted">ID: ${escapeHtml(l.userId)}</div>
+                </div>
+              </div>
+            </td>
+            <td>${escapeHtml(l.department)}</td>
+            <td><strong>${escapeHtml(l.leaveType)}</strong></td>
+            <td>${formatLeaveDateRange(l.startDate, l.endDate)}</td>
+            <td><strong>${l.days}</strong> day${l.days === 1 ? '' : 's'}</td>
+            <td>
+              <div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(l.reason)}">
+                ${escapeHtml(l.reason)}
+              </div>
+            </td>
+            <td>${getLeaveStatusBadge(l.status)}</td>
+            <td>
+              <div style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(l.adminComment || '')}">
+                ${l.adminComment ? escapeHtml(l.adminComment) : '<span class="text-muted">—</span>'}
+              </div>
+            </td>
+            <td>
+              ${isPending ? `
+                <div style="display:flex;gap:var(--sp-2)">
+                  <button class="btn btn-sm btn-primary" onclick="openReviewModal('${l.id}')">Review</button>
+                </div>
+              ` : `
+                <span class="text-xs text-muted">Processed</span>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openReviewModal(leaveId) {
+      activeReviewLeaveId = leaveId;
+      const leaves = getLeaves();
+      const leave = leaves.find(l => l.id === leaveId);
+      if (!leave) return;
+
+      document.getElementById('review-leave-id').value = leave.id;
+      document.getElementById('rev-emp-name').textContent = leave.employeeName;
+      document.getElementById('rev-emp-dept').textContent = leave.department;
+      document.getElementById('rev-leave-type').textContent = leave.leaveType;
+      document.getElementById('rev-dates').textContent = formatLeaveDateRange(leave.startDate, leave.endDate);
+      document.getElementById('rev-duration').textContent = `${leave.days} working day${leave.days === 1 ? '' : 's'}`;
+      document.getElementById('rev-reason').textContent = leave.reason;
+      document.getElementById('rev-leave-badge').innerHTML = getLeaveStatusBadge(leave.status);
+      document.getElementById('review-comment').value = leave.adminComment || '';
+
+      // Live Quota calculation check
+      const leaveYear = parseInt(leave.startDate.slice(0, 4), 10) || new Date().getFullYear();
+      const balance = getEmployeeLeaveBalance(leave.userId, leaveYear);
+      const quotaEl = document.getElementById('rev-quota-info');
+      const approveBtn = document.getElementById('btn-approve');
+
+      if (quotaEl) {
+        const canApprove = balance.remainingDays >= leave.days;
+        quotaEl.innerHTML = `
+          <strong>Yearly Quota:</strong> ${balance.quota} days &bull;
+          <strong>Approved (Used):</strong> ${balance.approvedDays} days &bull;
+          <strong>Remaining:</strong> ${balance.remainingDays} days
+          <div style="margin-top:4px">
+            ${canApprove ?
+              `<span class="badge badge-success">✓ Quota Sufficient (${leave.days} requested)</span>` :
+              `<span class="badge badge-danger">✕ Insufficient Quota (${leave.days} requested, only ${balance.remainingDays} left)</span>`
+            }
+          </div>
+        `;
+        if (approveBtn) {
+          approveBtn.disabled = !canApprove;
+          approveBtn.title = canApprove ? 'Approve this leave request' : 'Cannot approve: employee does not have enough remaining quota';
+        }
+      }
+
+      const modal = document.getElementById('review-modal');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeReviewModal() {
+      activeReviewLeaveId = null;
+      const modal = document.getElementById('review-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function executeReview(action) {
+      if (!activeReviewLeaveId) return;
+
+      const comment = document.getElementById('review-comment')?.value || '';
+      const session = currentSession();
+
+      const result = reviewLeaveRequest(activeReviewLeaveId, action, comment, session);
+      if (result.success) {
+        showToast(result.message, 'success');
+        closeReviewModal();
+        renderLeavesPage();
+      } else {
+        showToast(result.message, 'error');
+      }
+    }
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>

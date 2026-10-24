@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Admin Dashboard. Live organisation metrics, attendance summaries, announcements and smart helper.">
+  <title>Dashboard — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar Toggle (mobile) -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a href="admin.html" class="active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="employees.html">
+          <span class="nav-icon">👥</span> Employees
+        </a>
+        <div class="nav-section">Management</div>
+        <a href="leaves.html">
+          <span class="nav-icon">📅</span> Leaves
+        </a>
+        <a href="payslip.html">
+          <span class="nav-icon">💰</span> Payslips
+        </a>
+        <a href="settings.html">
+          <span class="nav-icon">⚙</span> Settings
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Admin</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="text-sm text-muted">Real-time overview of your workforce, daily attendance &amp; operations</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <div style="display:inline-flex;align-items:center;gap:var(--sp-2);background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius-full);padding:6px 14px;font-size:0.8125rem;font-weight:550;color:var(--text-secondary)">
+            <span>📅</span> <span id="admin-date-text">Live Overview</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live stat cards — values computed from real data, zero dummy data -->
+      <div class="stat-grid">
+        <div class="card stat-card">
+          <div class="stat-icon blue">👥</div>
+          <div class="stat-label">Total Employees</div>
+          <div class="stat-value" id="stat-employees">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon green">✓</div>
+          <div class="stat-label">Present (On-Time)</div>
+          <div class="stat-value" id="stat-present-ontime">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon amber">⏰</div>
+          <div class="stat-label">Late Today</div>
+          <div class="stat-value" id="stat-late-today">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon brand">🌓</div>
+          <div class="stat-label">Half Day Today</div>
+          <div class="stat-value" id="stat-halfday-today">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon blue">🏖</div>
+          <div class="stat-label">On Leave Today</div>
+          <div class="stat-value" id="stat-on-leave-today">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon red">✕</div>
+          <div class="stat-label">Absent Today</div>
+          <div class="stat-value" id="stat-absent-today">0</div>
+        </div>
+      </div>
+
+      <!-- Secondary Metrics Row: Pending Leaves Banner -->
+      <div class="card" style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-6);background:var(--brand-50);border-color:var(--brand-200);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-3)">
+        <div style="display:flex;align-items:center;gap:var(--sp-3)">
+          <span style="font-size:1.5rem">📅</span>
+          <div>
+            <div style="font-weight:600;color:var(--brand-900)">Leave Approvals</div>
+            <div class="text-xs text-muted" id="pending-leaves-banner-text">0 leave requests pending your review</div>
+          </div>
+        </div>
+        <a href="leaves.html" class="btn btn-primary btn-sm">Review Leaves</a>
+      </div>
+
+      <!-- Today's Attendance Overview -->
+      <div class="card" style="margin-bottom:var(--sp-8)">
+        <div class="card-body" style="padding-bottom:var(--sp-4)">
+          <div class="flex-between">
+            <div>
+              <h3>Today's Attendance Overview</h3>
+              <p class="text-sm text-muted" id="att-today-subtitle">Live check-ins for today</p>
+            </div>
+            <span class="badge badge-info" id="att-today-count">0 Checked In</span>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="admin-attendance-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="admin-attendance-empty">
+          <div class="empty-icon">⏰</div>
+          <p>No attendance records recorded yet today.</p>
+        </div>
+      </div>
+
+      <!-- Department-Level Attendance Breakdown -->
+      <div class="card" style="margin-bottom:var(--sp-8)">
+        <div class="card-body" style="padding-bottom:var(--sp-4)">
+          <div>
+            <h3>Department Attendance Breakdown</h3>
+            <p class="text-sm text-muted">Summary of today's attendance across all organizational departments</p>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Department</th>
+                <th>Total Staff</th>
+                <th>Present</th>
+                <th>Late</th>
+                <th>Half Day</th>
+                <th>On Leave</th>
+                <th>Absent</th>
+                <th>Attendance Rate</th>
+              </tr>
+            </thead>
+            <tbody id="admin-dept-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="admin-dept-empty">
+          <div class="empty-icon">🏢</div>
+          <p>No employees found. Add employees to view department breakdown.</p>
+        </div>
+      </div>
+
+      <!-- ====== COMPANY ANNOUNCEMENTS SECTION (Stage 4) ====== -->
+      <div class="card" style="margin-bottom:var(--sp-8)">
+        <div class="card-body">
+          <div class="flex-between" style="margin-bottom:var(--sp-4)">
+            <div>
+              <h3>Company Announcements</h3>
+              <p class="text-sm text-muted">Broadcast notices, updates, and news to all employees</p>
+            </div>
+            <span class="badge badge-info" id="announcements-count">0 Announcements</span>
+          </div>
+
+          <!-- New Announcement Form -->
+          <form id="announcement-form" style="margin-bottom:var(--sp-6)" autocomplete="off">
+            <div class="form-group" style="margin-bottom:var(--sp-3)">
+              <label class="form-label" for="announcement-input">Post an Announcement</label>
+              <textarea class="form-textarea" id="announcement-input" placeholder="Type an announcement to share with your workforce..."></textarea>
+              <div class="form-error" id="announcement-error"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" type="submit">
+              <span>📢</span> Post Announcement
+            </button>
+          </form>
+
+          <!-- Announcements Feed -->
+          <div class="announcement-list" id="announcements-feed"></div>
+
+          <div class="empty-state" id="announcements-empty" style="padding:var(--sp-8) var(--sp-4)">
+            <div class="empty-icon">📢</div>
+            <p>No announcements posted yet. Use the field above to publish notices to all employees.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-body">
+          <h3 style="margin-bottom:var(--sp-2)">Quick Actions</h3>
+          <p class="text-sm text-muted" style="margin-bottom:var(--sp-5)">Manage your organisation and workforce efficiently.</p>
+          <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap">
+            <a href="employees.html" class="btn btn-primary">Manage Employees</a>
+            <a href="leaves.html" class="btn btn-secondary">Review Leaves</a>
+            <a href="payslip.html" class="btn btn-secondary">Generate Payslips</a>
+            <a href="settings.html" class="btn btn-secondary">Company Settings</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const session = requireAdmin();
+      if (!session) return;
+      populateSidebarUser();
+      initMobileSidebar();
+      refreshDashboard(session);
+
+      // Initialize Smart Helper floating assistant for Admin
+      initSmartHelper(session);
+
+      // Announcement form listener
+      const annForm = document.getElementById('announcement-form');
+      if (annForm) {
+        annForm.addEventListener('submit', e => {
+          e.preventDefault();
+          handlePostAnnouncement(session);
+        });
+      }
+    });
+
+    function refreshDashboard(session) {
+      const todayStr = getTodayDateString();
+      const settings = getCompanySettings();
+
+      // Subtitle & Date Badge
+      const dateText = document.getElementById('admin-date-text');
+      if (dateText) dateText.textContent = formatDisplayDate(todayStr);
+
+      const sub = document.getElementById('att-today-subtitle');
+      if (sub) {
+        sub.textContent = `${formatDisplayDate(todayStr)} • Office starts at ${formatDisplayTime(settings.officeStartTime)} (+${settings.graceMinutes}m grace)`;
+      }
+
+      // Employees (excluding Admin!)
+      const allUsers = getUsers();
+      const employees = allUsers.filter(u => u.role === 'employee');
+      const totalEmployees = employees.length;
+
+      // Real Attendance records today
+      const todayAttendance = getAttendance().filter(a => a.date === todayStr);
+
+      // Checked-in breakdown without double counting
+      const onTimePresent = todayAttendance.filter(a => a.status === 'present').length;
+      const lateToday     = todayAttendance.filter(a => a.status === 'late').length;
+      const halfDayToday  = todayAttendance.filter(a => a.status === 'half-day').length;
+      const totalCheckedIn = todayAttendance.length;
+
+      // On Approved Leave Today
+      const allLeaves = getLeaves();
+      const approvedLeavesToday = allLeaves.filter(l =>
+        l.status === 'approved' &&
+        l.startDate <= todayStr &&
+        l.endDate >= todayStr
+      );
+      const onLeaveCount = approvedLeavesToday.length;
+
+      // Absences on configured working days only (Rule: do not count absences on non-working days)
+      const dayName = getDayName(todayStr);
+      const isWorkingDay = (settings.workingDays || []).includes(dayName);
+      let absentCount = 0;
+      if (isWorkingDay) {
+        // Employees who neither checked in nor are on approved leave
+        const attendedOrOnLeaveIds = new Set([
+          ...todayAttendance.map(a => a.userId),
+          ...approvedLeavesToday.map(l => l.userId),
+        ]);
+        absentCount = Math.max(0, totalEmployees - attendedOrOnLeaveIds.size);
+      }
+
+      // Update stat cards
+      document.getElementById('stat-employees').textContent      = totalEmployees;
+      document.getElementById('stat-present-ontime').textContent = onTimePresent;
+      document.getElementById('stat-late-today').textContent     = lateToday;
+      document.getElementById('stat-halfday-today').textContent  = halfDayToday;
+      document.getElementById('stat-on-leave-today').textContent = onLeaveCount;
+      document.getElementById('stat-absent-today').textContent   = absentCount;
+
+      // Pending leaves banner
+      const pendingLeaves = allLeaves.filter(l => l.status === 'pending');
+      const bannerText = document.getElementById('pending-leaves-banner-text');
+      if (bannerText) {
+        bannerText.textContent = `${pendingLeaves.length} leave request${pendingLeaves.length === 1 ? '' : 's'} pending your review`;
+      }
+
+      // Render Today's Attendance Table
+      renderTodayAttendanceTable(todayStr);
+
+      // Render Department Attendance Breakdown
+      renderDepartmentBreakdown(employees, todayAttendance, approvedLeavesToday, isWorkingDay);
+
+      // Render Announcements
+      renderAnnouncementsFeed(session);
+    }
+
+    function renderTodayAttendanceTable(todayStr) {
+      const records = getDateAttendanceRecords(todayStr);
+      const tbody = document.getElementById('admin-attendance-tbody');
+      const emptyEl = document.getElementById('admin-attendance-empty');
+      const countEl = document.getElementById('att-today-count');
+
+      if (!tbody) return;
+
+      if (countEl) countEl.textContent = `${records.length} Checked In`;
+
+      if (records.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      tbody.innerHTML = records.map(rec => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:var(--sp-3)">
+              <div class="sidebar-avatar" style="width:32px;height:32px;font-size:.75rem">${getInitials(rec.employeeName)}</div>
+              <div>
+                <div style="font-weight:550">${escapeHtml(rec.employeeName)}</div>
+                <div class="text-xs text-muted">${escapeHtml(rec.employeeEmail)}</div>
+              </div>
+            </div>
+          </td>
+          <td>${escapeHtml(rec.department)}</td>
+          <td>${formatDisplayTime(rec.checkInTime)}</td>
+          <td>${rec.checkOutTime ? formatDisplayTime(rec.checkOutTime) : '<span class="text-muted">—</span>'}</td>
+          <td>${rec.durationText && rec.durationText !== '—' ? rec.durationText : '<span class="text-muted">In Progress</span>'}</td>
+          <td>${getAttendanceBadge(rec.status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDepartmentBreakdown(employees, attendance, leavesToday, isWorkingDay) {
+      const tbody = document.getElementById('admin-dept-tbody');
+      const emptyEl = document.getElementById('admin-dept-empty');
+      if (!tbody) return;
+
+      if (employees.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      // Group employees by department
+      const deptMap = {};
+      employees.forEach(emp => {
+        const d = emp.department || 'Other';
+        if (!deptMap[d]) deptMap[d] = [];
+        deptMap[d].push(emp);
+      });
+
+      const depts = Object.keys(deptMap).sort();
+      const attendanceMap = new Map(attendance.map(a => [a.userId, a]));
+      const leaveSet = new Set(leavesToday.map(l => l.userId));
+
+      tbody.innerHTML = depts.map(dName => {
+        const staff = deptMap[dName];
+        const total = staff.length;
+
+        let present = 0;
+        let late = 0;
+        let halfDay = 0;
+        let onLeave = 0;
+        let absent = 0;
+
+        staff.forEach(emp => {
+          const att = attendanceMap.get(emp.id);
+          const isLeave = leaveSet.has(emp.id);
+
+          if (att) {
+            if (att.status === 'present') present++;
+            else if (att.status === 'late') late++;
+            else if (att.status === 'half-day') halfDay++;
+          } else if (isLeave) {
+            onLeave++;
+          } else if (isWorkingDay) {
+            absent++;
+          }
+        });
+
+        const checkedInTotal = present + late + halfDay;
+        const rate = total > 0 ? Math.round((checkedInTotal / total) * 100) : 0;
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(dName)}</strong></td>
+            <td>${total}</td>
+            <td><span class="badge badge-success">${present}</span></td>
+            <td><span class="badge badge-warning">${late}</span></td>
+            <td><span class="badge badge-warning" style="background:#fef3c7;color:#92400e">${halfDay}</span></td>
+            <td><span class="badge badge-info">${onLeave}</span></td>
+            <td><span class="badge ${absent > 0 ? 'badge-danger' : 'badge-neutral'}">${absent}</span></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:var(--sp-2)">
+                <div style="flex:1;max-width:80px;height:6px;background:var(--gray-200);border-radius:var(--radius-full);overflow:hidden">
+                  <div style="width:${rate}%;height:100%;background:${rate >= 80 ? 'var(--success-500)' : rate >= 50 ? 'var(--warning-500)' : 'var(--danger-500)'}"></div>
+                </div>
+                <span style="font-weight:600;font-size:0.8125rem">${rate}%</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAnnouncementsFeed(session) {
+      const list = getAnnouncementsList();
+      const feed = document.getElementById('announcements-feed');
+      const emptyEl = document.getElementById('announcements-empty');
+      const countEl = document.getElementById('announcements-count');
+
+      if (!feed) return;
+      if (countEl) countEl.textContent = `${list.length} Announcement${list.length === 1 ? '' : 's'}`;
+
+      if (list.length === 0) {
+        feed.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      feed.innerHTML = list.map(a => `
+        <div class="announcement-item" data-id="${a.id}">
+          <div class="announcement-header">
+            <div class="announcement-meta">
+              <span>📢</span>
+              <strong>${escapeHtml(a.authorName || 'Admin')}</strong>
+              <span>&bull;</span>
+              <span>${formatAnnouncementTime(a.createdAt)}</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="handleDeleteAnnouncement('${a.id}')" title="Delete announcement" style="color:var(--danger-500);font-size:0.75rem;padding:2px 8px">
+              🗑 Delete
+            </button>
+          </div>
+          <div class="announcement-text">${escapeHtml(a.message)}</div>
+        </div>
+      `).join('');
+    }
+
+    function handlePostAnnouncement(session) {
+      const input = document.getElementById('announcement-input');
+      const errEl = document.getElementById('announcement-error');
+      const msg = input?.value || '';
+
+      if (!msg.trim()) {
+        if (errEl) {
+          errEl.textContent = 'Please enter an announcement message.';
+          errEl.classList.add('visible');
+        }
+        return;
+      }
+      if (errEl) errEl.classList.remove('visible');
+
+      const res = postAnnouncement(msg, session);
+      if (res.success) {
+        showToast(res.message, 'success');
+        input.value = '';
+        renderAnnouncementsFeed(session);
+      } else {
+        showToast(res.message, 'error');
+      }
+    }
+
+    function handleDeleteAnnouncement(id) {
+      const res = deleteAnnouncement(id);
+      if (res.success) {
+        showToast('Announcement removed.', 'success');
+        const session = currentSession();
+        renderAnnouncementsFeed(session);
+      }
+    }
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>

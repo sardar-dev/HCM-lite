@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Official Monthly Payslips. Calculate salary, deductions, and print PDF statements.">
+  <title>Payslip — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar Toggle (mobile) -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar (dynamic based on role) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav-container">
+        <!-- Injected dynamically based on role -->
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">User</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Role</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1>Salary Payslip</h1>
+          <p class="text-sm text-muted">Generate, review and print monthly salary statements</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls Toolbar (Hidden in Print) -->
+      <div class="card payslip-controls" style="padding:var(--sp-4) var(--sp-6);margin-bottom:var(--sp-6)">
+        <div style="display:flex;align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap">
+          <!-- Employee Selector (Admin only) -->
+          <div class="form-group" id="emp-select-group" style="margin-bottom:0;min-width:240px;flex:1">
+            <label class="form-label" for="payslip-emp-select">Select Employee</label>
+            <select class="form-select" id="payslip-emp-select">
+              <option value="">Choose an employee…</option>
+            </select>
+          </div>
+
+          <!-- Month Selector -->
+          <div class="form-group" style="margin-bottom:0;min-width:180px">
+            <label class="form-label" for="payslip-month-select">Pay Period (Month)</label>
+            <input class="form-input" id="payslip-month-select" type="month">
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display:flex;gap:var(--sp-2)">
+            <button class="btn btn-primary" onclick="generatePayslipView()">
+              <span>⚡</span> View Payslip
+            </button>
+            <button class="btn btn-secondary" id="btn-print" onclick="window.print()">
+              <span>🖨</span> Print / Save PDF
+            </button>
+            <button class="btn btn-secondary" id="btn-csv" onclick="exportPayslipCSV()">
+              <span>📥</span> Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payslip Statement Document -->
+      <div class="payslip-container">
+        <!-- Empty State (before selection) -->
+        <div class="card" id="payslip-empty">
+          <div class="card-body empty-state">
+            <div class="empty-icon">💰</div>
+            <p id="payslip-empty-msg">Select a pay period to generate and review the salary statement.</p>
+          </div>
+        </div>
+
+        <!-- Rendered Payslip Sheet -->
+        <div class="payslip-sheet hidden" id="payslip-sheet">
+          <!-- Header -->
+          <div class="payslip-header-brand">
+            <div>
+              <div class="payslip-company-name" id="ps-company-name">HCM Lite</div>
+              <div class="text-xs text-muted" style="margin-top:2px">HUMAN CAPITAL MANAGEMENT &bull; CONFIDENTIAL PAYSLIP</div>
+            </div>
+            <div class="payslip-doc-title">
+              <h2>Salary Payslip</h2>
+              <div class="text-xs text-muted" id="ps-generated-date">Date: —</div>
+            </div>
+          </div>
+
+          <!-- Employee & Pay Period Details Grid -->
+          <div class="payslip-grid-info">
+            <div>
+              <div class="payslip-section-title">Employee Details</div>
+              <table class="payslip-info-table">
+                <tbody>
+                  <tr><td class="label">Employee Name:</td><td class="val" id="ps-emp-name">—</td></tr>
+                  <tr><td class="label">Employee ID:</td><td class="val" id="ps-emp-id">—</td></tr>
+                  <tr><td class="label">Department:</td><td class="val" id="ps-emp-dept">—</td></tr>
+                  <tr><td class="label">Designation:</td><td class="val" id="ps-emp-desig">—</td></tr>
+                  <tr><td class="label">Joining Date:</td><td class="val" id="ps-emp-joining">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <div class="payslip-section-title">Payroll Period Summary</div>
+              <table class="payslip-info-table">
+                <tbody>
+                  <tr><td class="label">Pay Period:</td><td class="val" id="ps-pay-period">—</td></tr>
+                  <tr><td class="label">Working Days in Month:</td><td class="val" id="ps-working-days">—</td></tr>
+                  <tr><td class="label">Days Present (On-time):</td><td class="val" id="ps-present-days">—</td></tr>
+                  <tr><td class="label">Late Arrivals:</td><td class="val" id="ps-late-days">—</td></tr>
+                  <tr><td class="label">Half Days Worked:</td><td class="val" id="ps-half-days">—</td></tr>
+                  <tr><td class="label">Paid Approved Leaves:</td><td class="val" id="ps-leave-days">—</td></tr>
+                  <tr><td class="label">Unpaid Absent Days:</td><td class="val" id="ps-absent-days" style="color:var(--danger-700)">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Salary & Deductions Breakdown -->
+          <div class="payslip-section-title">Salary &amp; Deduction Breakdown</div>
+          <table class="payslip-calc-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Formula / Basis</th>
+                <th class="right">Earnings</th>
+                <th class="right">Deductions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Basic Monthly Salary</strong></td>
+                <td class="text-muted">Contracted Base Pay</td>
+                <td class="right" id="ps-base-salary">—</td>
+                <td class="right text-muted">—</td>
+              </tr>
+              <tr>
+                <td><strong>Absence Deduction</strong></td>
+                <td class="text-muted" id="ps-absence-calc-note">0 days @ daily rate</td>
+                <td class="right text-muted">—</td>
+                <td class="right" id="ps-absence-deduction">—</td>
+              </tr>
+              <tr>
+                <td><strong>Half-Day Deduction</strong></td>
+                <td class="text-muted" id="ps-halfday-calc-note">0 days @ 0.5 × daily rate</td>
+                <td class="right text-muted">—</td>
+                <td class="right" id="ps-halfday-deduction">—</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="2"><strong>Total Deductions</strong></td>
+                <td class="right text-muted">—</td>
+                <td class="right" id="ps-total-deductions" style="color:var(--danger-700)">—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Net Salary Payable Banner -->
+          <div class="payslip-net-banner">
+            <div>
+              <div class="net-label">NET SALARY PAYABLE</div>
+              <div class="text-xs text-muted" id="ps-net-words">Calculated as: Monthly Salary &minus; Deductions</div>
+            </div>
+            <div class="net-amount" id="ps-net-salary">Rs. 0</div>
+          </div>
+
+          <!-- Signatures Block -->
+          <div class="payslip-signatures">
+            <div class="payslip-sign-box">
+              <div class="payslip-sign-line"></div>
+              <div class="payslip-sign-label">Employee Signature</div>
+            </div>
+            <div class="payslip-sign-box">
+              <div class="payslip-sign-line"></div>
+              <div class="payslip-sign-label">Authorized Signatory / HR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/payslip.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    let activeSession = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      activeSession = requireAuth();
+      if (!activeSession) return;
+
+      populateSidebarUser();
+      initMobileSidebar();
+      renderNavigation(activeSession);
+      setupControls(activeSession);
+      initSmartHelper(activeSession);
+
+      // Auto-generate if query parameters exist or for employee
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryEmpId = urlParams.get('userId');
+      const queryMonth = urlParams.get('month');
+
+      if (queryMonth) {
+        document.getElementById('payslip-month-select').value = queryMonth;
+      }
+
+      if (activeSession.role === 'admin' && queryEmpId) {
+        const empSelect = document.getElementById('payslip-emp-select');
+        if (empSelect) empSelect.value = queryEmpId;
+      }
+
+      generatePayslipView();
+    });
+
+    function renderNavigation(session) {
+      const nav = document.getElementById('sidebar-nav-container');
+      if (!nav) return;
+
+      if (session.role === 'admin') {
+        nav.innerHTML = `
+          <div class="nav-section">Main</div>
+          <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+          <a href="employees.html"><span class="nav-icon">👥</span> Employees</a>
+          <div class="nav-section">Management</div>
+          <a href="leaves.html"><span class="nav-icon">📅</span> Leaves</a>
+          <a href="payslip.html" class="active"><span class="nav-icon">💰</span> Payslips</a>
+          <a href="settings.html"><span class="nav-icon">⚙</span> Settings</a>
+        `;
+      } else {
+        nav.innerHTML = `
+          <div class="nav-section">My Portal</div>
+          <a href="employee.html"><span class="nav-icon">🏠</span> Dashboard</a>
+          <a href="payslip.html" class="active"><span class="nav-icon">💰</span> Payslip</a>
+        `;
+      }
+    }
+
+    function setupControls(session) {
+      // Default month to current month 'YYYY-MM'
+      const today = new Date();
+      const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const monthInput = document.getElementById('payslip-month-select');
+      if (monthInput && !monthInput.value) {
+        monthInput.value = currentMonthStr;
+      }
+
+      const empGroup = document.getElementById('emp-select-group');
+      const empSelect = document.getElementById('payslip-emp-select');
+
+      if (session.role === 'admin') {
+        // Admin: populate employee select dropdown
+        empGroup.classList.remove('hidden');
+        const employees = getUsers().filter(u => u.role === 'employee');
+        if (employees.length === 0) {
+          empSelect.innerHTML = '<option value="">No employees available</option>';
+        } else {
+          empSelect.innerHTML = '<option value="">Select an employee…</option>' +
+            employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)} (${escapeHtml(e.department)})</option>`).join('');
+        }
+      } else {
+        // Employee: strictly lock to current session userId!
+        empGroup.classList.add('hidden');
+      }
+    }
+
+    function generatePayslipView() {
+      if (!activeSession) return;
+
+      let targetEmpId = null;
+      if (activeSession.role === 'admin') {
+        targetEmpId = document.getElementById('payslip-emp-select')?.value;
+        if (!targetEmpId) {
+          showEmptyState('Please select an employee and pay period to view their payslip.');
+          return;
+        }
+      } else {
+        // Employee: always enforce session userId regardless of URL params
+        targetEmpId = activeSession.userId;
+      }
+
+      const monthStr = document.getElementById('payslip-month-select')?.value;
+      if (!monthStr) {
+        showEmptyState('Please select a valid pay period month.');
+        return;
+      }
+
+      const payslip = calculateEmployeePayslip(targetEmpId, monthStr);
+      if (!payslip) {
+        showEmptyState('No payslip records available for the selected employee.');
+        return;
+      }
+
+      renderPayslipDocument(payslip);
+    }
+
+    function showEmptyState(msg) {
+      document.getElementById('payslip-sheet')?.classList.add('hidden');
+      const emptyCard = document.getElementById('payslip-empty');
+      const emptyMsg = document.getElementById('payslip-empty-msg');
+      if (emptyCard) emptyCard.classList.remove('hidden');
+      if (emptyMsg) emptyMsg.textContent = msg;
+    }
+
+    let currentPayslipData = null;
+
+    function renderPayslipDocument(ps) {
+      currentPayslipData = ps;
+      document.getElementById('payslip-empty')?.classList.add('hidden');
+      const sheet = document.getElementById('payslip-sheet');
+      if (!sheet) return;
+      sheet.classList.remove('hidden');
+
+      // Header
+      document.getElementById('ps-company-name').textContent = ps.companyName;
+      document.getElementById('ps-generated-date').textContent = `Generated: ${ps.generatedDate}`;
+
+      // Employee details
+      document.getElementById('ps-emp-name').textContent    = ps.employeeName;
+      document.getElementById('ps-emp-id').textContent      = ps.employeeId;
+      document.getElementById('ps-emp-dept').textContent    = ps.department;
+      document.getElementById('ps-emp-desig').textContent   = ps.designation;
+      document.getElementById('ps-emp-joining').textContent = formatDisplayDate(ps.joiningDate);
+
+      // Period summary
+      document.getElementById('ps-pay-period').textContent   = ps.monthLabel;
+      document.getElementById('ps-working-days').textContent = `${ps.totalWorkingDays} working days`;
+      document.getElementById('ps-present-days').textContent = `${ps.presentOnTimeCount} days`;
+      document.getElementById('ps-late-days').textContent    = `${ps.lateCount} days (counted as present)`;
+      document.getElementById('ps-half-days').textContent    = `${ps.halfDayCount} days (0.5 day deduction)`;
+      document.getElementById('ps-leave-days').textContent   = `${ps.approvedLeaveCount} days (paid leave)`;
+      document.getElementById('ps-absent-days').textContent  = `${ps.absentCount} days`;
+
+      // Earnings & Deductions
+      document.getElementById('ps-base-salary').textContent       = formatCurrency(ps.monthlySalary);
+      document.getElementById('ps-absence-calc-note').textContent = `${ps.absentCount} day(s) @ ${formatCurrency(ps.perDaySalary)} / day`;
+      document.getElementById('ps-absence-deduction').textContent = `- ${formatCurrency(ps.absenceDeduction)}`;
+
+      document.getElementById('ps-halfday-calc-note').textContent = `${ps.halfDayCount} half-day(s) @ 0.5 × ${formatCurrency(ps.perDaySalary)}`;
+      document.getElementById('ps-halfday-deduction').textContent = `- ${formatCurrency(ps.halfDayDeduction)}`;
+
+      document.getElementById('ps-total-deductions').textContent  = `- ${formatCurrency(ps.totalDeductions)}`;
+      document.getElementById('ps-net-salary').textContent        = formatCurrency(ps.netSalary);
+
+      const netFormula = `Base Salary (${formatCurrency(ps.monthlySalary)}) − Deductions (${formatCurrency(ps.totalDeductions)})`;
+      document.getElementById('ps-net-words').textContent = netFormula;
+    }
+
+    function exportPayslipCSV() {
+      if (!currentPayslipData) {
+        showToast('Please generate a payslip first to export.', 'warning');
+        return;
+      }
+      const ps = currentPayslipData;
+      const rows = [
+        ['Field', 'Value'],
+        ['Company Name', ps.companyName],
+        ['Employee Name', ps.employeeName],
+        ['Employee ID', ps.employeeId],
+        ['Department', ps.department],
+        ['Designation', ps.designation],
+        ['Joining Date', ps.joiningDate],
+        ['Pay Period', ps.monthLabel],
+        ['Working Days in Month', ps.totalWorkingDays],
+        ['Present (On-Time) Days', ps.presentOnTimeCount],
+        ['Late Days (Counted as Present)', ps.lateCount],
+        ['Half Days (0.5 Deduction)', ps.halfDayCount],
+        ['Approved Leaves (Paid)', ps.approvedLeaveCount],
+        ['Absent Days', ps.absentCount],
+        ['Monthly Base Salary', ps.monthlySalary],
+        ['Per-Day Salary', ps.perDaySalary],
+        ['Absence Deductions', ps.absenceDeduction],
+        ['Half-Day Deductions', ps.halfDayDeduction],
+        ['Total Deductions', ps.totalDeductions],
+        ['Net Salary', ps.netSalary],
+        ['Generated Date', ps.generatedDate]
+      ];
+
+      const csvContent = rows.map(r => `"${r[0]}","${String(r[1]).replace(/"/g, '""')}"`).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `payslip_${ps.employeeName.replace(/\s+/g, '_')}_${ps.monthStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Payslip exported to CSV.', 'success');
+    }
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Modern Human Capital Management. Manage employees, attendance, leaves and payroll.">
+  <title>HCM Lite — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <button class="theme-toggle" id="auth-theme-toggle" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+      <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+    </button>
+
+    <!-- ====== SETUP CARD (first run only) ====== -->
+    <div class="auth-card has-spotlight hidden" id="setup-card">
+      <div class="auth-logo">
+        <div class="logo-icon">H</div>
+        <span>HCM Lite</span>
+      </div>
+      <p class="auth-subtitle">Welcome! Set up your company and admin account to get started.</p>
+
+      <form id="setup-form" autocomplete="off" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="setup-company">Company Name</label>
+          <input class="form-input" id="setup-company" type="text" placeholder="e.g. Acme Corp">
+          <div class="form-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="setup-name">Admin Full Name</label>
+          <input class="form-input" id="setup-name" type="text" placeholder="e.g. Ahmed Khan">
+          <div class="form-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="setup-email">Admin Email</label>
+          <input class="form-input" id="setup-email" type="email" placeholder="admin@company.com">
+          <div class="form-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="setup-password">Password</label>
+          <input class="form-input" id="setup-password" type="password" placeholder="Min. 4 characters">
+          <div class="form-error"></div>
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%;margin-top:var(--sp-2)">Create Account &amp; Continue</button>
+      </form>
+    </div>
+
+    <!-- ====== LOGIN CARD ====== -->
+    <div class="auth-card has-spotlight hidden" id="login-card">
+      <div class="auth-logo">
+        <div class="logo-icon">H</div>
+        <span>HCM Lite</span>
+      </div>
+      <p class="auth-subtitle">Sign in to your account.</p>
+
+      <form id="login-form" autocomplete="off" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email</label>
+          <input class="form-input" id="login-email" type="email" placeholder="you@company.com">
+          <div class="form-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="Enter password">
+          <div class="form-error"></div>
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%;margin-top:var(--sp-2)">Sign In</button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/helper.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // If already logged in, redirect
+      redirectIfLoggedIn();
+
+      // Show setup or login card
+      if (isFirstRun()) {
+        document.getElementById('setup-card').classList.remove('hidden');
+      } else {
+        document.getElementById('login-card').classList.remove('hidden');
+      }
+
+      // Setup form
+      document.getElementById('setup-form').addEventListener('submit', e => {
+        e.preventDefault();
+        if (handleSetup(e.target)) {
+          window.location.href = 'pages/admin.html';
+        }
+      });
+
+      // Login form
+      document.getElementById('login-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const form = e.target;
+        clearValidationErrors(form);
+        const email = form.querySelector('#login-email').value;
+        const pass  = form.querySelector('#login-password').value;
+
+        // Basic validation
+        let valid = true;
+        if (!email.trim()) {
+          showFieldError(form.querySelector('#login-email'), 'Email is required.');
+          valid = false;
+        }
+        if (!pass) {
+          showFieldError(form.querySelector('#login-password'), 'Password is required.');
+          valid = false;
+        }
+        if (!valid) return;
+
+        const result = attemptLogin(email, pass);
+        if (result.success) {
+          const session = currentSession();
+          if (session.role === 'admin') {
+            window.location.href = 'pages/admin.html';
+          } else {
+            window.location.href = 'pages/employee.html';
+          }
+        } else {
+          showFieldError(form.querySelector('#login-email'), result.message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

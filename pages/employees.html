@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Manage your employees. Add, edit, search and filter employees.">
+  <title>Employees — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar Toggle (mobile) -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a href="admin.html">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="employees.html" class="active">
+          <span class="nav-icon">👥</span> Employees
+        </a>
+        <div class="nav-section">Management</div>
+        <a href="leaves.html">
+          <span class="nav-icon">📅</span> Leaves
+        </a>
+        <a href="payslip.html">
+          <span class="nav-icon">💰</span> Payslips
+        </a>
+        <a href="settings.html">
+          <span class="nav-icon">⚙</span> Settings
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Admin</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1>Employees <span class="badge badge-info" id="employee-count">0</span></h1>
+          <p class="text-sm text-muted">Manage your workforce</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-primary" id="btn-add-employee" onclick="openAddEmployee()">+ Add Employee</button>
+        </div>
+      </div>
+
+      <!-- Toolbar: Search + Department Filter -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input class="form-input" id="emp-search" type="text" placeholder="Search by name or email…">
+        </div>
+        <select class="form-select filter-select" id="emp-dept-filter">
+          <option value="all">All Departments</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Salary</th>
+                <th style="width:100px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="employees-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Empty state -->
+        <div class="empty-state" id="employees-empty">
+          <div class="empty-icon">👥</div>
+          <p>No employees yet. Click <strong>Add Employee</strong> to get started.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ====== Add / Edit Employee Modal ====== -->
+  <div class="modal-overlay" id="employee-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="employee-modal-title">Add Employee</h3>
+        <button class="modal-close" onclick="closeModal('employee-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="employee-form" autocomplete="off" novalidate>
+          <input type="hidden" id="employee-id">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="emp-name">Full Name</label>
+              <input class="form-input" id="emp-name" type="text" placeholder="e.g. Sara Ali">
+              <div class="form-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="emp-email">Email</label>
+              <input class="form-input" id="emp-email" type="email" placeholder="sara@company.com">
+              <div class="form-error"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="emp-department">Department</label>
+              <select class="form-select" id="emp-department">
+                <option value="">Select department</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+                <option value="Finance">Finance</option>
+                <option value="Human Resources">Human Resources</option>
+                <option value="Operations">Operations</option>
+                <option value="Support">Support</option>
+                <option value="Management">Management</option>
+              </select>
+              <div class="form-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="emp-designation">Designation</label>
+              <input class="form-input" id="emp-designation" type="text" placeholder="e.g. Software Engineer">
+              <div class="form-error"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="emp-salary">Monthly Salary (Rs.)</label>
+              <input class="form-input" id="emp-salary" type="number" min="1" placeholder="e.g. 75000">
+              <div class="form-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="emp-password">Password</label>
+              <input class="form-input" id="emp-password" type="password" placeholder="Min. 4 characters">
+              <div class="form-error"></div>
+              <div class="text-xs text-muted" id="emp-password-hint" style="margin-top:2px"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('employee-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Confirm Delete Modal ====== -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3>Confirm Delete</h3>
+        <button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-text" id="confirm-text">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+        <button class="btn btn-danger" onclick="executeDeleteEmployee()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/employees.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const session = requireAdmin();
+      if (!session) return;
+      populateSidebarUser();
+      initMobileSidebar();
+      populateDeptFilter();
+      renderEmployeesTable();
+      initSmartHelper(session);
+
+      // Search listener (debounced)
+      let searchTimer;
+      document.getElementById('emp-search').addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => renderEmployeesTable(currentFilters()), 200);
+      });
+
+      // Department filter
+      document.getElementById('emp-dept-filter').addEventListener('change', () => {
+        renderEmployeesTable(currentFilters());
+      });
+
+      // Close modals on overlay click
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', e => {
+          if (e.target === overlay) overlay.classList.remove('open');
+        });
+      });
+
+      // Close modals on Escape key
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+        }
+      });
+    });
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>

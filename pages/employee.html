@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HCM Lite — Employee Portal. Mark daily attendance, track leaves and view balances.">
+  <title>Employee Portal — HCM Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('hcm_theme_pref');
+        if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">H</div>
+        <span id="sidebar-company">HCM Lite</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">My Portal</div>
+        <a href="employee.html" class="active"><span class="nav-icon">🏠</span> Dashboard</a>
+        <a href="payslip.html"><span class="nav-icon">💰</span> Payslip</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">E</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="sidebar-user-name">Employee</div>
+            <div class="sidebar-user-role" id="sidebar-user-role">Employee</div>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn btn-theme-sidebar btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <button class="btn btn-logout btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header has-spotlight">
+        <div>
+          <h1 id="emp-welcome">Welcome</h1>
+          <p class="text-sm text-muted">Your personal employee portal, attendance tracking &amp; leave management</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon">🌙</span> <span class="theme-mode-text">Dark</span>
+          </button>
+          <a href="payslip.html" class="btn btn-secondary btn-sm">
+            <span>💰</span> View My Payslip
+          </a>
+          <button class="btn btn-secondary btn-sm" onclick="openEmpPasswordModal()">
+            <span>🔒</span> Change Password
+          </button>
+        </div>
+      </div>
+
+      <!-- Employee Info Stats -->
+      <div class="stat-grid">
+        <div class="card stat-card">
+          <div class="stat-icon blue">🏢</div>
+          <div class="stat-label">Department</div>
+          <div class="stat-value text-sm" id="emp-dept" style="font-size:1.125rem">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon green">💼</div>
+          <div class="stat-label">Designation</div>
+          <div class="stat-value text-sm" id="emp-desig" style="font-size:1.125rem">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon brand">📅</div>
+          <div class="stat-label">Today's Status</div>
+          <div class="stat-value text-sm" id="emp-today-status-stat" style="font-size:1.125rem">Not Marked</div>
+        </div>
+      </div>
+
+      <!-- Daily Attendance Action Card -->
+      <div class="card" style="margin-bottom:var(--sp-8)">
+        <div class="attendance-hero has-spotlight">
+          <div>
+            <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:0.04em">DAILY ATTENDANCE</div>
+            <h2 id="att-today-date" style="margin:4px 0">Today</h2>
+            <div class="text-sm text-muted" id="att-policy-hint">Office Start: —</div>
+          </div>
+          <div style="text-align:right">
+            <div class="text-xs text-muted" style="margin-bottom:4px">CURRENT STATUS</div>
+            <div id="att-status-badge"><span class="badge badge-neutral">Not Marked</span></div>
+          </div>
+        </div>
+
+        <div class="attendance-time-grid">
+          <div class="attendance-time-card">
+            <div class="time-label">CHECK-IN TIME</div>
+            <div class="time-value" id="att-checkin-time">—</div>
+          </div>
+          <div class="attendance-time-card">
+            <div class="time-label">CHECK-OUT TIME</div>
+            <div class="time-value" id="att-checkout-time">—</div>
+          </div>
+          <div class="attendance-time-card">
+            <div class="time-label">WORK DURATION</div>
+            <div class="time-value" id="att-work-duration">—</div>
+          </div>
+        </div>
+
+        <div class="attendance-actions">
+          <button class="btn btn-primary" id="btn-checkin" onclick="handleCheckIn()">
+            <span>⏰</span> Check In
+          </button>
+          <button class="btn btn-secondary" id="btn-checkout" onclick="handleCheckOut()">
+            <span>🚪</span> Check Out
+          </button>
+        </div>
+
+        <div style="padding:0 var(--sp-6) var(--sp-5)">
+          <div class="attendance-note" id="att-feedback-note">
+            <span>ℹ</span> Please check in upon starting your workday.
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance History Table -->
+      <div class="card" style="margin-bottom:var(--sp-8)">
+        <div class="card-body" style="padding-bottom:var(--sp-4)">
+          <div class="flex-between" style="margin-bottom:var(--sp-4)">
+            <div>
+              <h3>My Attendance History</h3>
+              <p class="text-sm text-muted">A complete record of your previous attendance</p>
+            </div>
+            <span class="badge badge-info" id="att-history-count">0 Records</span>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="att-history-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="att-history-empty">
+          <div class="empty-icon">📅</div>
+          <p>No attendance records found yet. Check in to record your attendance.</p>
+        </div>
+      </div>
+
+      <!-- ====== LEAVE MANAGEMENT SECTION (Stage 3) ====== -->
+      <div class="page-header" style="margin-top:var(--sp-8)">
+        <div>
+          <h2>Leave Management</h2>
+          <p class="text-sm text-muted">Track your annual leave quota, submit requests and view decisions</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary" id="btn-open-leave-modal" onclick="openLeaveModal()">
+            <span>✈</span> Apply for Leave
+          </button>
+        </div>
+      </div>
+
+      <!-- Leave Balance Cards -->
+      <div class="stat-grid" style="margin-bottom:var(--sp-6)">
+        <div class="card stat-card">
+          <div class="stat-icon blue">📅</div>
+          <div class="stat-label">Yearly Quota</div>
+          <div class="stat-value" id="leave-stat-quota">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon green">✓</div>
+          <div class="stat-label">Approved (Used)</div>
+          <div class="stat-value" id="leave-stat-used">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon brand">🌟</div>
+          <div class="stat-label">Remaining Balance</div>
+          <div class="stat-value" id="leave-stat-remaining">0</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon amber">⏳</div>
+          <div class="stat-label">Pending Days</div>
+          <div class="stat-value" id="leave-stat-pending">0</div>
+        </div>
+      </div>
+
+      <!-- My Leave Requests Table -->
+      <div class="card">
+        <div class="card-body" style="padding-bottom:var(--sp-4)">
+          <div class="flex-between">
+            <div>
+              <h3>My Leave Requests</h3>
+              <p class="text-sm text-muted">All leave applications submitted by you</p>
+            </div>
+            <span class="badge badge-info" id="emp-leaves-count">0 Requests</span>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Leave Type</th>
+                <th>Date Range</th>
+                <th>Working Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Admin Comment</th>
+              </tr>
+            </thead>
+            <tbody id="emp-leaves-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="emp-leaves-empty">
+          <div class="empty-icon">🏖</div>
+          <p>No leave requests submitted yet. Click <strong>Apply for Leave</strong> to submit a request.</p>
+        </div>
+      </div>
+
+      <!-- ====== COMPANY ANNOUNCEMENTS SECTION (Stage 4) ====== -->
+      <div class="card" style="margin-top:var(--sp-8)">
+        <div class="card-body">
+          <div class="flex-between" style="margin-bottom:var(--sp-4)">
+            <div>
+              <h3>Company Announcements</h3>
+              <p class="text-sm text-muted">Latest notices and organizational updates from management</p>
+            </div>
+            <span class="badge badge-info" id="emp-announcements-count">0 Updates</span>
+          </div>
+
+          <div class="announcement-list" id="emp-announcements-feed"></div>
+
+          <div class="empty-state" id="emp-announcements-empty" style="padding:var(--sp-8) var(--sp-4)">
+            <div class="empty-icon">📢</div>
+            <p>No company announcements at this time.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ====== Apply for Leave Modal ====== -->
+  <div class="modal-overlay" id="leave-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Apply for Leave</h3>
+        <button class="modal-close" onclick="closeLeaveModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="leave-form" autocomplete="off" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="leave-type">Leave Type</label>
+            <select class="form-select" id="leave-type">
+              <option value="">Select leave type</option>
+              <option value="Casual Leave">Casual Leave</option>
+              <option value="Sick Leave">Sick Leave</option>
+              <option value="Annual Leave">Annual Leave</option>
+            </select>
+            <div class="form-error"></div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="leave-start-date">Start Date</label>
+              <input class="form-input" id="leave-start-date" type="date">
+              <div class="form-error"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="leave-end-date">End Date</label>
+              <input class="form-input" id="leave-end-date" type="date">
+              <div class="form-error"></div>
+            </div>
+          </div>
+
+          <!-- Live working days preview -->
+          <div style="background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-4)">
+            <div class="text-xs text-muted" style="margin-bottom:2px">LEAVE DURATION CALCULATION</div>
+            <div style="font-weight:600;font-size:0.95rem" id="leave-days-preview">0 working days (Mon–Fri only)</div>
+            <div class="text-xs text-muted" id="leave-balance-preview" style="margin-top:2px">Remaining quota: —</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="leave-reason">Reason</label>
+            <textarea class="form-textarea" id="leave-reason" placeholder="Provide a brief explanation for your leave request..."></textarea>
+            <div class="form-error"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeLeaveModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitLeaveApplication()">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Change Password Modal ====== -->
+  <div class="modal-overlay" id="emp-password-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Change Password</h3>
+        <button class="modal-close" onclick="closeEmpPasswordModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="emp-pass-form" autocomplete="off" novalidate onsubmit="handleEmpPasswordSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" for="emp-current-pass">Current Password</label>
+            <input class="form-input" id="emp-current-pass" type="password" placeholder="Enter current password">
+            <div class="form-error"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="emp-new-pass">New Password</label>
+            <input class="form-input" id="emp-new-pass" type="password" placeholder="Minimum 4 characters">
+            <div class="form-error"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="emp-confirm-pass">Confirm New Password</label>
+            <input class="form-input" id="emp-confirm-pass" type="password" placeholder="Repeat new password">
+            <div class="form-error"></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:var(--sp-3);margin-top:var(--sp-6)">
+            <button class="btn btn-secondary" type="button" onclick="closeEmpPasswordModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Update Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/storage.js"></script>
+  <script src="../js/helper.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    let currentEmployeeId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const session = requireEmployee();
+      if (!session) return;
+      currentEmployeeId = session.userId;
+
+      populateSidebarUser();
+      initMobileSidebar();
+      renderEmployeeProfile(session);
+      refreshAttendanceUI();
+      refreshLeaveUI();
+      renderEmployeeAnnouncements();
+
+      // Initialize Smart Helper floating assistant for Employee
+      initSmartHelper(session);
+
+      // Date input listeners for live duration calculation
+      const startIn = document.getElementById('leave-start-date');
+      const endIn = document.getElementById('leave-end-date');
+      if (startIn && endIn) {
+        startIn.addEventListener('input', updateLeaveModalPreview);
+        endIn.addEventListener('input', updateLeaveModalPreview);
+      }
+
+      // Close modal on overlay click
+      const modal = document.getElementById('leave-modal');
+      if (modal) {
+        modal.addEventListener('click', e => {
+          if (e.target === modal) closeLeaveModal();
+        });
+      }
+
+      // Close modal on escape
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
+          closeLeaveModal();
+        }
+      });
+    });
+
+    function renderEmployeeProfile(session) {
+      const users = getUsers();
+      const me = users.find(u => u.id === session.userId);
+      if (me) {
+        document.getElementById('emp-welcome').textContent = `Welcome, ${me.name}`;
+        document.getElementById('emp-dept').textContent = me.department;
+        document.getElementById('emp-desig').textContent = me.designation;
+      }
+    }
+
+    /* ============================================================
+       Attendance UI Functions
+       ============================================================ */
+
+    function refreshAttendanceUI() {
+      if (!currentEmployeeId) return;
+
+      const todayStr = getTodayDateString();
+      const settings = getCompanySettings();
+
+      const dateEl = document.getElementById('att-today-date');
+      if (dateEl) dateEl.textContent = formatDisplayDate(todayStr);
+
+      const policyEl = document.getElementById('att-policy-hint');
+      if (policyEl) {
+        const [sh, sm] = (settings.officeStartTime || '09:00').split(':').map(Number);
+        const cutoffMin = (sh * 60) + (sm || 0) + Number(settings.graceMinutes || 0);
+        const cutH = Math.floor(cutoffMin / 60);
+        const cutM = cutoffMin % 60;
+        const cutoffStr = `${String(cutH).padStart(2,'0')}:${String(cutM).padStart(2,'0')}`;
+        policyEl.textContent = `Office Start: ${formatDisplayTime(settings.officeStartTime)} (Grace: ${settings.graceMinutes}m — Late after ${formatDisplayTime(cutoffStr)})`;
+      }
+
+      const todayRecord = getEmployeeTodayAttendance(currentEmployeeId, todayStr);
+      const btnIn = document.getElementById('btn-checkin');
+      const btnOut = document.getElementById('btn-checkout');
+      const timeIn = document.getElementById('att-checkin-time');
+      const timeOut = document.getElementById('att-checkout-time');
+      const duration = document.getElementById('att-work-duration');
+      const statusBadge = document.getElementById('att-status-badge');
+      const statusStat = document.getElementById('emp-today-status-stat');
+      const note = document.getElementById('att-feedback-note');
+
+      if (!todayRecord) {
+        if (timeIn) timeIn.textContent = '—';
+        if (timeOut) timeOut.textContent = '—';
+        if (duration) duration.textContent = '—';
+        if (statusBadge) statusBadge.innerHTML = getAttendanceBadge('not-marked');
+        if (statusStat) statusStat.textContent = 'Not Marked';
+
+        if (btnIn) {
+          btnIn.disabled = false;
+          btnIn.classList.remove('btn-secondary');
+          btnIn.classList.add('btn-primary');
+        }
+        if (btnOut) {
+          btnOut.disabled = true;
+        }
+        if (note) {
+          note.innerHTML = '<span>ℹ</span> Please check in upon starting your workday.';
+        }
+      } else {
+        if (timeIn) timeIn.textContent = formatDisplayTime(todayRecord.checkInTime);
+        if (timeOut) timeOut.textContent = todayRecord.checkOutTime ? formatDisplayTime(todayRecord.checkOutTime) : '—';
+        if (duration) duration.textContent = todayRecord.durationText || '—';
+        if (statusBadge) statusBadge.innerHTML = getAttendanceBadge(todayRecord.status);
+        if (statusStat) statusStat.textContent = capitalise(todayRecord.status);
+
+        if (btnIn) {
+          btnIn.disabled = true;
+          btnIn.classList.remove('btn-primary');
+          btnIn.classList.add('btn-secondary');
+        }
+
+        if (todayRecord.checkOutTime) {
+          if (btnOut) btnOut.disabled = true;
+          if (note) {
+            const halfDayMsg = todayRecord.status === 'half-day' ? ' (Recorded as Half Day — under 5 hours).' : '.';
+            note.innerHTML = `<span>✓</span> Day completed at ${formatDisplayTime(todayRecord.checkOutTime)} with ${todayRecord.durationText} worked${halfDayMsg}`;
+          }
+        } else {
+          if (btnOut) {
+            btnOut.disabled = false;
+            btnOut.classList.remove('btn-secondary');
+            btnOut.classList.add('btn-primary');
+          }
+          if (note) {
+            const lateMsg = todayRecord.wasLate ? ' (Marked Late: check-in after grace period).' : ' (On time).';
+            note.innerHTML = `<span>⏰</span> Checked in at ${formatDisplayTime(todayRecord.checkInTime)}${lateMsg} Remember to check out before leaving.`;
+          }
+        }
+      }
+
+      renderAttendanceHistory();
+    }
+
+    function handleCheckIn() {
+      if (!currentEmployeeId) return;
+      const result = checkInEmployee(currentEmployeeId);
+      if (result.success) {
+        showToast(result.message, 'success');
+        refreshAttendanceUI();
+      } else {
+        showToast(result.message, 'error');
+      }
+    }
+
+    function handleCheckOut() {
+      if (!currentEmployeeId) return;
+      const result = checkOutEmployee(currentEmployeeId);
+      if (result.success) {
+        showToast(result.message, 'success');
+        refreshAttendanceUI();
+      } else {
+        showToast(result.message, 'error');
+      }
+    }
+
+    function renderAttendanceHistory() {
+      if (!currentEmployeeId) return;
+      const history = getEmployeeAttendanceHistory(currentEmployeeId);
+      const tbody = document.getElementById('att-history-tbody');
+      const emptyEl = document.getElementById('att-history-empty');
+      const countEl = document.getElementById('att-history-count');
+
+      if (!tbody) return;
+
+      if (countEl) countEl.textContent = `${history.length} Record${history.length === 1 ? '' : 's'}`;
+
+      if (history.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      tbody.innerHTML = history.map(rec => `
+        <tr>
+          <td><strong>${escapeHtml(rec.date)}</strong></td>
+          <td>${getDayName(rec.date)}</td>
+          <td>${formatDisplayTime(rec.checkInTime)}</td>
+          <td>${rec.checkOutTime ? formatDisplayTime(rec.checkOutTime) : '<span class="text-muted">—</span>'}</td>
+          <td>${rec.durationText && rec.durationText !== '—' ? rec.durationText : '<span class="text-muted">In Progress</span>'}</td>
+          <td>${getAttendanceBadge(rec.status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    /* ============================================================
+       Leave Management UI Functions (Stage 3)
+       ============================================================ */
+
+    function refreshLeaveUI() {
+      if (!currentEmployeeId) return;
+
+      const balance = getEmployeeLeaveBalance(currentEmployeeId);
+      document.getElementById('leave-stat-quota').textContent     = `${balance.quota} Days`;
+      document.getElementById('leave-stat-used').textContent      = `${balance.approvedDays} Days`;
+      document.getElementById('leave-stat-remaining').textContent = `${balance.remainingDays} Days`;
+      document.getElementById('leave-stat-pending').textContent   = `${balance.pendingDays} Days`;
+
+      renderEmployeeLeavesTable();
+    }
+
+    function renderEmployeeLeavesTable() {
+      if (!currentEmployeeId) return;
+      const leaves = getEmployeeLeaves(currentEmployeeId);
+      const tbody = document.getElementById('emp-leaves-tbody');
+      const emptyEl = document.getElementById('emp-leaves-empty');
+      const countEl = document.getElementById('emp-leaves-count');
+
+      if (!tbody) return;
+
+      if (countEl) countEl.textContent = `${leaves.length} Request${leaves.length === 1 ? '' : 's'}`;
+
+      if (leaves.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      tbody.innerHTML = leaves.map(l => `
+        <tr>
+          <td><strong>${escapeHtml(l.leaveType)}</strong></td>
+          <td>${formatLeaveDateRange(l.startDate, l.endDate)}</td>
+          <td><strong>${l.days}</strong> working day${l.days === 1 ? '' : 's'}</td>
+          <td><div style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(l.reason)}">${escapeHtml(l.reason)}</div></td>
+          <td>${getLeaveStatusBadge(l.status)}</td>
+          <td>${l.adminComment ? escapeHtml(l.adminComment) : '<span class="text-muted">—</span>'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function openLeaveModal() {
+      const modal = document.getElementById('leave-modal');
+      const form = document.getElementById('leave-form');
+      if (!modal || !form) return;
+
+      form.reset();
+      clearValidationErrors(form);
+
+      // Default start date to tomorrow or today
+      const today = getTodayDateString();
+      const startIn = document.getElementById('leave-start-date');
+      const endIn = document.getElementById('leave-end-date');
+      if (startIn && endIn) {
+        startIn.value = today;
+        endIn.value = today;
+      }
+
+      updateLeaveModalPreview();
+      modal.classList.add('open');
+    }
+
+    function closeLeaveModal() {
+      const modal = document.getElementById('leave-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function updateLeaveModalPreview() {
+      const start = document.getElementById('leave-start-date')?.value;
+      const end = document.getElementById('leave-end-date')?.value;
+      const daysPreview = document.getElementById('leave-days-preview');
+      const balPreview = document.getElementById('leave-balance-preview');
+
+      if (!daysPreview || !balPreview) return;
+
+      const balance = getEmployeeLeaveBalance(currentEmployeeId);
+      balPreview.textContent = `Remaining yearly quota: ${balance.remainingDays} day(s)`;
+
+      if (!start || !end) {
+        daysPreview.textContent = '0 working days (Mon–Fri only)';
+        return;
+      }
+
+      if (start > end) {
+        daysPreview.innerHTML = '<span style="color:var(--danger-500)">Start date must be on or before end date</span>';
+        return;
+      }
+
+      const workingDays = calculateWorkingDays(start, end);
+      if (workingDays === 0) {
+        daysPreview.innerHTML = '<span style="color:var(--warning-700)">0 working days (dates fall on weekends)</span>';
+      } else {
+        const exceeds = workingDays > balance.remainingDays;
+        const color = exceeds ? 'color:var(--danger-500)' : 'color:var(--brand-600)';
+        daysPreview.innerHTML = `<span style="${color}"><strong>${workingDays}</strong> working day${workingDays === 1 ? '' : 's'}</span>${exceeds ? ' (Exceeds remaining quota!)' : ''}`;
+      }
+    }
+
+    function submitLeaveApplication() {
+      if (!currentEmployeeId) return;
+
+      const form = document.getElementById('leave-form');
+      clearValidationErrors(form);
+
+      const typeField   = document.getElementById('leave-type');
+      const startField  = document.getElementById('leave-start-date');
+      const endField    = document.getElementById('leave-end-date');
+      const reasonField = document.getElementById('leave-reason');
+
+      const validations = [
+        {
+          field: typeField,
+          rules: [{ test: v => Boolean(v && v.trim()), message: 'Please select a leave type.' }],
+        },
+        {
+          field: startField,
+          rules: [{ test: v => Boolean(v && v.trim()), message: 'Start date is required.' }],
+        },
+        {
+          field: endField,
+          rules: [
+            { test: v => Boolean(v && v.trim()), message: 'End date is required.' },
+            { test: v => !startField.value || v >= startField.value, message: 'End date must be on or after start date.' },
+          ],
+        },
+        {
+          field: reasonField,
+          rules: [{ test: v => Boolean(v && v.trim().length >= 3), message: 'Reason must be at least 3 characters.' }],
+        },
+      ];
+
+      if (!validateFields(form, validations)) return;
+
+      const result = applyForLeave({
+        userId: currentEmployeeId,
+        leaveType: typeField.value,
+        startDate: startField.value,
+        endDate: endField.value,
+        reason: reasonField.value,
+      });
+
+      if (result.success) {
+        showToast(result.message, 'success');
+        closeLeaveModal();
+        refreshLeaveUI();
+      } else {
+        showFieldError(startField, result.message);
+        showToast(result.message, 'error');
+      }
+    }
+
+    function renderEmployeeAnnouncements() {
+      const list = getAnnouncementsList();
+      const feed = document.getElementById('emp-announcements-feed');
+      const emptyEl = document.getElementById('emp-announcements-empty');
+      const countEl = document.getElementById('emp-announcements-count');
+
+      if (!feed) return;
+      if (countEl) countEl.textContent = `${list.length} Update${list.length === 1 ? '' : 's'}`;
+
+      if (list.length === 0) {
+        feed.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+
+      feed.innerHTML = list.map(a => `
+        <div class="announcement-item" data-id="${a.id}">
+          <div class="announcement-header">
+            <div class="announcement-meta">
+              <span>📢</span>
+              <strong>${escapeHtml(a.authorName || 'Management')}</strong>
+              <span>&bull;</span>
+              <span>${formatAnnouncementTime(a.createdAt)}</span>
+            </div>
+          </div>
+          <div class="announcement-text">${escapeHtml(a.message)}</div>
+        </div>
+      `).join('');
+    }
+
+    function openEmpPasswordModal() {
+      const modal = document.getElementById('emp-password-modal');
+      const form = document.getElementById('emp-pass-form');
+      if (form) {
+        form.reset();
+        clearValidationErrors(form);
+      }
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeEmpPasswordModal() {
+      const modal = document.getElementById('emp-password-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function handleEmpPasswordSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('emp-pass-form');
+      clearValidationErrors(form);
+
+      const curField = document.getElementById('emp-current-pass');
+      const newField = document.getElementById('emp-new-pass');
+      const confField = document.getElementById('emp-confirm-pass');
+
+      let hasError = false;
+      if (!curField.value) {
+        showFieldError(curField, 'Current password is required.');
+        hasError = true;
+      }
+      if (!newField.value) {
+        showFieldError(newField, 'New password is required.');
+        hasError = true;
+      } else if (newField.value.length < 4) {
+        showFieldError(newField, 'Password must be at least 4 characters.');
+        hasError = true;
+      }
+      if (!confField.value) {
+        showFieldError(confField, 'Please confirm your new password.');
+        hasError = true;
+      } else if (confField.value !== newField.value) {
+        showFieldError(confField, 'Passwords do not match.');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      const res = changeUserPassword(currentEmployeeId, curField.value, newField.value);
+      if (!res.success) {
+        if (res.message.toLowerCase().includes('current password')) {
+          showFieldError(curField, res.message);
+        } else {
+          showFieldError(newField, res.message);
+        }
+        showToast(res.message, 'danger');
+        return;
+      }
+
+      closeEmpPasswordModal();
+      showToast('Password updated successfully.', 'success');
+    }
+
+    function initMobileSidebar() {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+  </script>
+</body>
+</html>
